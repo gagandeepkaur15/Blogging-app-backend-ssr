@@ -1,5 +1,6 @@
 const { Schema, model } = require("mongoose");
 const { createHmac, randomBytes } = require("node:crypto"); //Built in package //randomBytes to generate secret
+const { createTokenForUser } = require("../services/authentication")
 
 const userSchema = new Schema(
   {
@@ -49,7 +50,7 @@ userSchema.pre("save", function (next) {
 });
 
 //Virtual Function in MongoDB
-userSchema.static("matchPassword", async function(email,password){
+userSchema.static("matchPasswordAndGenerateToken", async function(email,password){
     const user = await this.findOne({ email });
     if(!user) throw Error('User not found');
 
@@ -62,8 +63,11 @@ userSchema.static("matchPassword", async function(email,password){
 
     if(hashedPassword !== userProvidedHash) throw new Error("Incorrect Password");
     
-    return { ...user._doc, password: undefined, salt: undefined }; //So password is not shared
+    // return { ...user._doc, password: undefined, salt: undefined }; //So password is not shared
     //return user;
+
+    const token = createTokenForUser(user);
+    return token;
 });
 
 const User = model("user", userSchema);
